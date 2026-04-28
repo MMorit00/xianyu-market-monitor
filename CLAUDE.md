@@ -6,6 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 基于 Playwright + AI 的闲鱼智能监控机器人。FastAPI 后端 + Vue 3 前端，支持多任务并发监控、多模态 AI 商品分析、多渠道通知推送。
 
+## MOZShop 分支定位
+
+本仓库是 `Usagi-org/ai-goofish-monitor` 的 fork，服务于 MOZShop 的闲鱼卖家运营。
+
+- `origin`: `MMorit00/xianyu-market-monitor`
+- `upstream`: `Usagi-org/ai-goofish-monitor`
+- 工作分支：`mozshop-seller-radar`
+- 改造目标：闲鱼站内趋势雷达、竞品分析、价格趋势、卖家动作建议、闲鱼文案草稿。
+- 非目标：自动上架、自动私聊、自动发货、替代 `xianyu-auto-reply-me`。
+
+优先保持上游可合并性：除非必须，不直接重写 `src/scraper.py`、`spider_v2.py` 等抓取核心。新增趋势功能优先放在独立 service、route、view 中。
+
+详细计划见 `docs/mozshop-seller-radar-plan.md`。
+
 ## 核心架构
 
 ```

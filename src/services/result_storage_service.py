@@ -37,7 +37,7 @@ def _fallback_unique_key(record: dict, item: dict) -> str:
 
 def _parse_raw_record(raw_json: str, *, status: str | None = None) -> dict:
     record = json.loads(raw_json)
-    if status is not None:
+    if status and status != "active":
         record["_status"] = status
     return record
 

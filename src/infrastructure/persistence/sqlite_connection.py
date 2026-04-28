@@ -90,6 +90,17 @@ SCHEMA_STATEMENTS = (
         UNIQUE(keyword_slug, run_id, item_id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS trend_keywords (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword TEXT NOT NULL UNIQUE,
+        category TEXT NOT NULL DEFAULT '',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
     "CREATE INDEX IF NOT EXISTS idx_tasks_name ON tasks(task_name)",
     """
     CREATE INDEX IF NOT EXISTS idx_results_filename_crawl
@@ -114,6 +125,10 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_snapshots_keyword_item_time
     ON price_snapshots(keyword_slug, item_id, snapshot_time DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_trend_keywords_enabled_category
+    ON trend_keywords(enabled, category, keyword)
     """,
 )
 

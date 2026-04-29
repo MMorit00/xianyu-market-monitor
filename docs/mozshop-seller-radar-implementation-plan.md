@@ -314,3 +314,30 @@ AI 分析
 7. 补充单元测试和集成测试。
 
 暂不做前端页面和真实抓取调度，避免过早耦合上游爬虫。
+
+## 第一版手机日报
+
+在趋势快照和机会评分基础上，第一版先实现“每日 AI 闲鱼机会日报”：
+
+```text
+趋势快照机会榜
+  -> 规则评分 Top 10
+  -> AI 审核
+  -> Top 5 日报
+  -> Bark 推送
+```
+
+第一版只使用观察关键词池和已生成快照，不做无关键词全站热榜。
+
+接口文档见：
+
+```text
+docs/trend-daily-report-api.md
+```
+
+默认定时：
+
+```text
+TREND_DAILY_REPORT_ENABLED=true
+TREND_DAILY_REPORT_CRON=0 9 * * *
+```

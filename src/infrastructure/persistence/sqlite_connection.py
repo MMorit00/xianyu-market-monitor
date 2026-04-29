@@ -155,6 +155,22 @@ SCHEMA_STATEMENTS = (
         UNIQUE(snapshot_id, link_unique_key)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS trend_daily_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        candidate_snapshot_ids_json TEXT NOT NULL DEFAULT '[]',
+        ai_review_json TEXT NOT NULL DEFAULT '{}',
+        push_title TEXT NOT NULL DEFAULT '',
+        push_body TEXT NOT NULL DEFAULT '',
+        push_channel TEXT NOT NULL DEFAULT 'bark',
+        push_status TEXT NOT NULL DEFAULT 'pending',
+        error_message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        sent_at TEXT
+    )
+    """,
     "CREATE INDEX IF NOT EXISTS idx_tasks_name ON tasks(task_name)",
     """
     CREATE INDEX IF NOT EXISTS idx_results_filename_crawl
@@ -199,6 +215,10 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_trend_items_snapshot
     ON trend_items(snapshot_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_trend_daily_reports_date
+    ON trend_daily_reports(report_date DESC, id DESC)
     """,
 )
 

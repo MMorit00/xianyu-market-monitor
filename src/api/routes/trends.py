@@ -3,9 +3,18 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from src.api.dependencies import get_trend_keyword_service, get_trend_snapshot_service
+from src.api.dependencies import (
+    get_trend_daily_report_service,
+    get_trend_keyword_service,
+    get_trend_snapshot_service,
+)
+from src.domain.models.trend_daily_report import (
+    TrendDailyReportRunRequest,
+    TrendDailyReportTestNotificationRequest,
+)
 from src.domain.models.trend_keyword import TrendKeywordCreate, TrendKeywordUpdate
 from src.domain.models.trend_snapshot import TrendSnapshotCreate
+from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import (
     TrendKeywordConflictError,
     TrendKeywordService,
@@ -129,3 +138,39 @@ async def list_trend_opportunities(
         latest_only=latest_only,
     )
     return {"items": [item.model_dump(mode="json") for item in opportunities]}
+
+
+@router.post("/daily-report/run", response_model=dict)
+async def run_daily_report(
+    payload: TrendDailyReportRunRequest | None = None,
+    service: TrendDailyReportService = Depends(get_trend_daily_report_service),
+):
+    request_payload = payload or TrendDailyReportRunRequest()
+    report = await service.run_report(
+        candidate_limit=request_payload.candidate_limit,
+        push=request_payload.push,
+    )
+    return {"message": "闲鱼机会日报已生成", "item": report.model_dump(mode="json")}
+
+
+@router.get("/daily-report/latest", response_model=dict)
+async def get_latest_daily_report(
+    service: TrendDailyReportService = Depends(get_trend_daily_report_service),
+):
+    report = await service.get_latest_report()
+    if not report:
+        raise HTTPException(status_code=404, detail="暂无闲鱼机会日报")
+    return {"item": report.model_dump(mode="json")}
+
+
+@router.post("/daily-report/send-test", response_model=dict)
+async def send_daily_report_test_notification(
+    payload: TrendDailyReportTestNotificationRequest | None = None,
+    service: TrendDailyReportService = Depends(get_trend_daily_report_service),
+):
+    request_payload = payload or TrendDailyReportTestNotificationRequest()
+    result = await service.send_test_notification(
+        title=request_payload.title,
+        body=request_payload.body,
+    )
+    return {"message": "测试通知已执行", "result": result}

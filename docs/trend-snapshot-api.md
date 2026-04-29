@@ -142,3 +142,5 @@ opportunity_score =
   + freshness_score * 0.15
   + execution_score * 0.15
 ```
+
+每日 AI 机会日报接口见 `docs/trend-daily-report-api.md`。

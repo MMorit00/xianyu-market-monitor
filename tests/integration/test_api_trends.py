@@ -3,8 +3,40 @@ from fastapi.testclient import TestClient
 
 from src.api import dependencies as deps
 from src.api.routes import trends
+from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import TrendKeywordService
 from src.services.trend_snapshot_service import TrendSnapshotService
+
+
+class FakeReviewer:
+    async def review(self, opportunities):
+        if not opportunities:
+            return {"daily_summary": "今日暂无明显机会。", "items": []}
+        return {
+            "daily_summary": "今天优先看 AI 商品图方向。",
+            "items": [
+                {
+                    "snapshot_id": opportunities[0].snapshot_id,
+                    "keyword": opportunities[0].keyword,
+                    "rank": "A",
+                    "should_push": True,
+                    "why": "上新快，卖家少。",
+                    "sell_angle": "资料包 + 新手教程。",
+                    "advantages": ["标准化交付"],
+                    "risks": ["教程需要跑通"],
+                    "next_action": "建议今天查看。",
+                }
+            ],
+        }
+
+
+class FakeNotifier:
+    def __init__(self):
+        self.messages = []
+
+    async def send(self, title, body):
+        self.messages.append((title, body))
+        return {"channel": "bark", "success": True, "message": "发送成功"}
 
 
 def _build_client(tmp_path) -> TestClient:
@@ -13,8 +45,17 @@ def _build_client(tmp_path) -> TestClient:
     db_path = str(tmp_path / "app.sqlite3")
     keyword_service = TrendKeywordService(db_path=db_path)
     snapshot_service = TrendSnapshotService(db_path=db_path)
+    notifier = FakeNotifier()
+    daily_report_service = TrendDailyReportService(
+        db_path=db_path,
+        ai_reviewer=FakeReviewer(),
+        notifier=notifier,
+    )
     app.dependency_overrides[deps.get_trend_keyword_service] = lambda: keyword_service
     app.dependency_overrides[deps.get_trend_snapshot_service] = lambda: snapshot_service
+    app.dependency_overrides[deps.get_trend_daily_report_service] = (
+        lambda: daily_report_service
+    )
     return TestClient(app)
 
 
@@ -138,3 +179,61 @@ def test_trend_snapshot_api_creates_snapshot_and_lists_opportunities(tmp_path):
     opportunities = response.json()["items"]
     assert len(opportunities) == 1
     assert opportunities[0]["keyword"] == "ComfyUI 工作流"
+
+
+def test_trend_daily_report_api_runs_and_returns_latest(tmp_path):
+    client = _build_client(tmp_path)
+
+    response = client.post(
+        "/api/trends/snapshots",
+        json={
+            "keyword": "AI商品图工作流",
+            "category": "AI",
+            "total_results": 10,
+            "items": [
+                {
+                    "title": "AI商品图工作流",
+                    "price": "59",
+                    "seller_nickname": "A店",
+                    "want_count": "18",
+                    "publish_time": "1小时前",
+                    "link": "https://example.com/a",
+                },
+                {
+                    "title": "电商主图提示词模板",
+                    "price": "79",
+                    "seller_nickname": "B店",
+                    "want_count": "12",
+                    "publish_time": "今天",
+                    "link": "https://example.com/b",
+                },
+            ],
+        },
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/trends/daily-report/run",
+        json={"candidate_limit": 5, "push": True},
+    )
+    assert response.status_code == 200
+    report = response.json()["item"]
+    assert report["push_status"] == "sent"
+    assert report["ai_review"]["daily_summary"] == "今天优先看 AI 商品图方向。"
+    assert "AI商品图工作流" in report["push_body"]
+
+    response = client.get("/api/trends/daily-report/latest")
+    assert response.status_code == 200
+    assert response.json()["item"]["id"] == report["id"]
+
+
+def test_trend_daily_report_api_sends_test_notification(tmp_path):
+    client = _build_client(tmp_path)
+
+    response = client.post(
+        "/api/trends/daily-report/send-test",
+        json={"title": "测试标题", "body": "测试内容"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["result"]["success"] is True

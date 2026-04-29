@@ -29,6 +29,7 @@ from src.services.process_service import ProcessService
 from src.services.scheduler_service import SchedulerService
 from src.services.task_log_cleanup_service import cleanup_task_logs
 from src.services.task_generation_service import TaskGenerationService
+from src.services.trend_daily_report_service import TrendDailyReportService
 from src.infrastructure.persistence.sqlite_bootstrap import bootstrap_sqlite_storage
 from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepository
 from src.infrastructure.config.settings import settings as app_settings
@@ -56,6 +57,13 @@ process_service.set_lifecycle_hooks(
     on_started=lambda task_id: _sync_task_runtime_status(task_id, True),
     on_stopped=lambda task_id: _sync_task_runtime_status(task_id, False),
 )
+
+
+async def _run_trend_daily_report() -> None:
+    await TrendDailyReportService().run_report(candidate_limit=10, push=True)
+
+
+scheduler_service.set_daily_report_runner(_run_trend_daily_report)
 
 # 设置全局 ProcessService 实例供依赖注入使用
 set_process_service(process_service)

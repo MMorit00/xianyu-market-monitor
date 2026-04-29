@@ -10,6 +10,7 @@ from src.services.process_service import ProcessService
 from src.services.scheduler_service import SchedulerService
 from src.services.task_generation_service import TaskGenerationService
 from src.services.trend_keyword_service import TrendKeywordService
+from src.services.trend_snapshot_service import TrendSnapshotService
 from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepository
 from src.infrastructure.external.ai_client import AIClient
 
@@ -48,6 +49,11 @@ def get_task_service() -> TaskService:
 def get_trend_keyword_service() -> TrendKeywordService:
     """获取趋势关键词服务实例"""
     return TrendKeywordService()
+
+
+def get_trend_snapshot_service() -> TrendSnapshotService:
+    """获取趋势快照服务实例"""
+    return TrendSnapshotService()
 
 
 def get_notification_service() -> NotificationService:

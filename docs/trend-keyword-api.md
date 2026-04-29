@@ -101,3 +101,5 @@ curl -X POST http://127.0.0.1:8010/api/trends/keywords \
   -H 'Content-Type: application/json' \
   -d '{"keyword":"ComfyUI 工作流","category":"AI"}'
 ```
+
+趋势快照、弱竞争机会评分和机会榜接口见 `docs/trend-snapshot-api.md`。

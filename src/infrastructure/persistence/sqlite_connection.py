@@ -101,6 +101,60 @@ SCHEMA_STATEMENTS = (
         updated_at TEXT NOT NULL
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS trend_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword_id INTEGER,
+        keyword TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT '',
+        snapshot_time TEXT NOT NULL,
+        total_results INTEGER NOT NULL DEFAULT 0,
+        new_items_24h INTEGER NOT NULL DEFAULT 0,
+        new_items_3d INTEGER NOT NULL DEFAULT 0,
+        seller_count INTEGER NOT NULL DEFAULT 0,
+        new_seller_count INTEGER NOT NULL DEFAULT 0,
+        min_price REAL,
+        max_price REAL,
+        median_price REAL,
+        want_count_total INTEGER NOT NULL DEFAULT 0,
+        want_count_avg REAL NOT NULL DEFAULT 0,
+        title_terms_json TEXT NOT NULL DEFAULT '[]',
+        title_repetition_rate REAL NOT NULL DEFAULT 0,
+        same_image_count INTEGER NOT NULL DEFAULT 0,
+        low_price_item_ratio REAL NOT NULL DEFAULT 0,
+        opportunity_score REAL NOT NULL DEFAULT 0,
+        opportunity_level TEXT NOT NULL DEFAULT 'D',
+        growth_score REAL NOT NULL DEFAULT 0,
+        competition_score REAL NOT NULL DEFAULT 0,
+        profit_score REAL NOT NULL DEFAULT 0,
+        freshness_score REAL NOT NULL DEFAULT 0,
+        execution_score REAL NOT NULL DEFAULT 0,
+        reasons_json TEXT NOT NULL DEFAULT '[]',
+        action TEXT NOT NULL DEFAULT '',
+        raw_metrics_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(keyword_id) REFERENCES trend_keywords(id) ON DELETE SET NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS trend_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        snapshot_id INTEGER NOT NULL,
+        item_id TEXT,
+        title TEXT NOT NULL DEFAULT '',
+        price REAL,
+        price_display TEXT,
+        seller_nickname TEXT,
+        want_count INTEGER NOT NULL DEFAULT 0,
+        publish_time TEXT,
+        link TEXT,
+        image_key TEXT,
+        raw_json TEXT NOT NULL DEFAULT '{}',
+        link_unique_key TEXT NOT NULL,
+        FOREIGN KEY(snapshot_id) REFERENCES trend_snapshots(id) ON DELETE CASCADE,
+        UNIQUE(snapshot_id, link_unique_key)
+    )
+    """,
     "CREATE INDEX IF NOT EXISTS idx_tasks_name ON tasks(task_name)",
     """
     CREATE INDEX IF NOT EXISTS idx_results_filename_crawl
@@ -129,6 +183,22 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_trend_keywords_enabled_category
     ON trend_keywords(enabled, category, keyword)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_trend_snapshots_keyword_time
+    ON trend_snapshots(keyword, snapshot_time DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_trend_snapshots_keyword_id_time
+    ON trend_snapshots(keyword_id, snapshot_time DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_trend_snapshots_opportunity
+    ON trend_snapshots(opportunity_level, opportunity_score DESC, snapshot_time DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_trend_items_snapshot
+    ON trend_items(snapshot_id)
     """,
 )
 

@@ -82,6 +82,18 @@ xianyu-auto-reply-me
    - 将 AI 分析结果导出到 `../product-copy/xianyu/trends/`。
    - 每个趋势生成一个 Markdown 文件，供人工确认后进入正式商品流程。
 
+## 详细实施计划
+
+后续实施以 `docs/mozshop-seller-radar-implementation-plan.md` 为准。
+
+当前优先级：
+
+1. 趋势快照：保存每次关键词扫描的结构化数据。
+2. 弱竞争机会评分：输出 `A/B/C/D` 等级、理由和动作建议。
+3. 趋势机会榜：让卖家每天看到“今天该测什么、继续观察什么、放弃什么”。
+4. AI 竞品总结：只基于快照和商品样本做总结，不凭空选品。
+5. 文案草稿导出：人工确认后再进入 `product-copy` 和 `autoreply`。
+
 ## 上游同步流程
 
 ```bash

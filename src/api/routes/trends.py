@@ -14,11 +14,14 @@ from src.domain.models.trend_daily_report import (
 )
 from src.domain.models.trend_keyword import TrendKeywordCreate, TrendKeywordUpdate
 from src.domain.models.trend_snapshot import TrendSnapshotCreate
+from src.infrastructure.config.env_manager import env_manager
+from src.infrastructure.config.settings import AISettings
 from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import (
     TrendKeywordConflictError,
     TrendKeywordService,
 )
+from src.services.notification_config_service import load_notification_settings
 from src.services.trend_snapshot_service import (
     TrendSnapshotService,
     TrendSnapshotValidationError,
@@ -26,6 +29,13 @@ from src.services.trend_snapshot_service import (
 
 
 router = APIRouter(prefix="/api/trends", tags=["trends"])
+
+
+def _env_bool(key: str, default: bool = False) -> bool:
+    value = env_manager.get_value(key)
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 @router.get("/keywords", response_model=dict)
@@ -151,6 +161,18 @@ async def run_daily_report(
         push=request_payload.push,
     )
     return {"message": "闲鱼机会日报已生成", "item": report.model_dump(mode="json")}
+
+
+@router.get("/daily-report/config", response_model=dict)
+async def get_daily_report_config():
+    notification_settings = load_notification_settings()
+    ai_settings = AISettings()
+    return {
+        "enabled": _env_bool("TREND_DAILY_REPORT_ENABLED", True),
+        "cron": env_manager.get_value("TREND_DAILY_REPORT_CRON", "0 9 * * *"),
+        "bark_configured": bool(notification_settings.bark_url),
+        "ai_configured": ai_settings.is_configured(),
+    }
 
 
 @router.get("/daily-report/latest", response_model=dict)

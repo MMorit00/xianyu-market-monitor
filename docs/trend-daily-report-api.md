@@ -86,6 +86,29 @@ GET /api/trends/daily-report/latest
 
 没有日报时返回 `404`。
 
+## 查看日报配置
+
+```http
+GET /api/trends/daily-report/config
+```
+
+返回：
+
+```json
+{
+  "enabled": true,
+  "cron": "0 9 * * *",
+  "bark_configured": true,
+  "ai_configured": true
+}
+```
+
+前端控制台路径：
+
+```text
+/trends
+```
+
 ## 测试 Bark 日报推送
 
 ```http

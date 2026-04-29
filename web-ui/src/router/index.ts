@@ -41,6 +41,12 @@ const routes = [
         meta: { titleKey: 'routes.results', requiresAuth: true },
       },
       {
+        path: 'trends',
+        name: 'Trends',
+        component: () => import('@/views/TrendsView.vue'),
+        meta: { titleKey: 'routes.trends', requiresAuth: true },
+      },
+      {
         path: 'logs',
         name: 'Logs',
         component: () => import('@/views/LogsView.vue'),

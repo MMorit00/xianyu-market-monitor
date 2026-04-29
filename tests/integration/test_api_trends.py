@@ -237,3 +237,16 @@ def test_trend_daily_report_api_sends_test_notification(tmp_path):
 
     assert response.status_code == 200
     assert response.json()["result"]["success"] is True
+
+
+def test_trend_daily_report_config_api(tmp_path):
+    client = _build_client(tmp_path)
+
+    response = client.get("/api/trends/daily-report/config")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["enabled"] is True
+    assert payload["cron"] == "0 9 * * *"
+    assert isinstance(payload["bark_configured"], bool)
+    assert isinstance(payload["ai_configured"], bool)

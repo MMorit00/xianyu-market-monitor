@@ -4,8 +4,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.api.dependencies import (
+    get_scheduler_service,
+    get_task_service,
     get_trend_daily_report_service,
     get_trend_keyword_service,
+    get_trend_monitor_task_service,
     get_trend_snapshot_refresh_service,
     get_trend_snapshot_service,
 )
@@ -14,17 +17,21 @@ from src.domain.models.trend_daily_report import (
     TrendDailyReportTestNotificationRequest,
 )
 from src.domain.models.trend_keyword import TrendKeywordCreate, TrendKeywordUpdate
+from src.domain.models.trend_monitor_task import TrendMonitorTaskSyncRequest
 from src.domain.models.trend_snapshot import (
     TrendSnapshotCreate,
     TrendSnapshotRefreshRequest,
 )
 from src.infrastructure.config.env_manager import env_manager
 from src.infrastructure.config.settings import AISettings
+from src.services.scheduler_service import SchedulerService
+from src.services.task_service import TaskService
 from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import (
     TrendKeywordConflictError,
     TrendKeywordService,
 )
+from src.services.trend_monitor_task_service import TrendMonitorTaskService
 from src.services.notification_config_service import load_notification_settings
 from src.services.trend_snapshot_refresh_service import TrendSnapshotRefreshService
 from src.services.trend_snapshot_service import (
@@ -165,6 +172,20 @@ async def refresh_trend_snapshots(
         limit_per_keyword=request_payload.limit_per_keyword,
     )
     return {"message": "趋势快照已刷新", **result}
+
+
+@router.post("/monitor-tasks/sync", response_model=dict)
+async def sync_trend_monitor_tasks(
+    payload: TrendMonitorTaskSyncRequest | None = None,
+    service: TrendMonitorTaskService = Depends(get_trend_monitor_task_service),
+    task_service: TaskService = Depends(get_task_service),
+    scheduler_service: SchedulerService = Depends(get_scheduler_service),
+):
+    request_payload = payload or TrendMonitorTaskSyncRequest()
+    result = await service.sync_monitor_tasks(request_payload)
+    tasks = await task_service.get_all_tasks()
+    await scheduler_service.reload_jobs(tasks)
+    return {"message": "趋势关键词监控任务已同步", **result}
 
 
 @router.post("/daily-report/run", response_model=dict)

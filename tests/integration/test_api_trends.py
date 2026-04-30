@@ -3,10 +3,23 @@ from fastapi.testclient import TestClient
 
 from src.api import dependencies as deps
 from src.api.routes import trends
+from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepository
+from src.services.task_service import TaskService
 from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import TrendKeywordService
+from src.services.trend_monitor_task_service import TrendMonitorTaskService
 from src.services.trend_snapshot_refresh_service import TrendSnapshotRefreshService
 from src.services.trend_snapshot_service import TrendSnapshotService
+
+
+class FakeScheduler:
+    def __init__(self):
+        self.reload_calls = 0
+        self.tasks = []
+
+    async def reload_jobs(self, tasks):
+        self.reload_calls += 1
+        self.tasks = tasks
 
 
 class FakeReviewer:
@@ -44,13 +57,21 @@ def _build_client(tmp_path) -> TestClient:
     app = FastAPI()
     app.include_router(trends.router)
     db_path = str(tmp_path / "app.sqlite3")
+    task_service = TaskService(
+        SqliteTaskRepository(db_path=db_path, legacy_config_file=None)
+    )
     keyword_service = TrendKeywordService(db_path=db_path)
     snapshot_service = TrendSnapshotService(db_path=db_path)
+    monitor_task_service = TrendMonitorTaskService(
+        keyword_service=keyword_service,
+        task_service=task_service,
+    )
     refresh_service = TrendSnapshotRefreshService(
         db_path=db_path,
         keyword_service=keyword_service,
         snapshot_service=snapshot_service,
     )
+    scheduler = FakeScheduler()
     notifier = FakeNotifier()
     daily_report_service = TrendDailyReportService(
         db_path=db_path,
@@ -58,8 +79,13 @@ def _build_client(tmp_path) -> TestClient:
         ai_reviewer=FakeReviewer(),
         notifier=notifier,
     )
+    app.dependency_overrides[deps.get_task_service] = lambda: task_service
+    app.dependency_overrides[deps.get_scheduler_service] = lambda: scheduler
     app.dependency_overrides[deps.get_trend_keyword_service] = lambda: keyword_service
     app.dependency_overrides[deps.get_trend_snapshot_service] = lambda: snapshot_service
+    app.dependency_overrides[deps.get_trend_monitor_task_service] = (
+        lambda: monitor_task_service
+    )
     app.dependency_overrides[deps.get_trend_snapshot_refresh_service] = (
         lambda: refresh_service
     )
@@ -208,6 +234,33 @@ def test_trend_snapshot_refresh_api_handles_empty_results(tmp_path):
     payload = response.json()
     assert payload["created_count"] == 0
     assert payload["skipped_count"] == 1
+
+
+def test_trend_monitor_task_sync_creates_tasks_from_keywords(tmp_path):
+    client = _build_client(tmp_path)
+    response = client.post(
+        "/api/trends/keywords",
+        json={"keyword": "AI商品图", "category": "AI"},
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/trends/monitor-tasks/sync",
+        json={"cron": "0 */6 * * *", "max_pages": 1},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["created_count"] == 1
+    assert payload["items"][0]["task_name"] == "卖家雷达 - AI商品图"
+
+    response = client.post(
+        "/api/trends/monitor-tasks/sync",
+        json={"cron": "0 */6 * * *", "max_pages": 1},
+    )
+    assert response.status_code == 200
+    assert response.json()["created_count"] == 0
+    assert response.json()["existing_count"] == 1
 
 
 def test_trend_daily_report_api_runs_and_returns_latest(tmp_path):

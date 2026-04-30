@@ -37,8 +37,45 @@ export interface TrendDailyReport {
   sent_at?: string | null
 }
 
+export interface TrendKeyword {
+  id: number
+  keyword: string
+  category: string
+  enabled: boolean
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
 export async function getDailyReportConfig(): Promise<TrendDailyReportConfig> {
   return await http('/api/trends/daily-report/config')
+}
+
+export async function getTrendKeywords(params: {
+  include_disabled?: boolean
+} = {}): Promise<TrendKeyword[]> {
+  const response = await http('/api/trends/keywords', { params })
+  return response.items || []
+}
+
+export async function createTrendKeyword(payload: {
+  keyword: string
+  category?: string
+  notes?: string
+  enabled?: boolean
+}): Promise<TrendKeyword> {
+  const response = await http('/api/trends/keywords', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deleteTrendKeyword(keywordId: number): Promise<void> {
+  await http(`/api/trends/keywords/${keywordId}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function getLatestDailyReport(): Promise<TrendDailyReport | null> {
@@ -88,6 +125,28 @@ export async function refreshTrendSnapshots(payload: {
   skipped: Array<{ keyword_id: number; keyword: string }>
 }> {
   return await http('/api/trends/snapshots/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function syncTrendMonitorTasks(payload: {
+  cron: string
+  max_pages: number
+  personal_only: boolean
+  free_shipping: boolean
+  new_publish_option?: string | null
+  update_existing: boolean
+}): Promise<{
+  message: string
+  created_count: number
+  updated_count: number
+  existing_count: number
+  skipped_count: number
+  items: Array<{ keyword: string; task_id: number; task_name: string; action: string }>
+}> {
+  return await http('/api/trends/monitor-tasks/sync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

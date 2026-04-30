@@ -11,6 +11,7 @@ from src.services.scheduler_service import SchedulerService
 from src.services.task_generation_service import TaskGenerationService
 from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import TrendKeywordService
+from src.services.trend_monitor_task_service import TrendMonitorTaskService
 from src.services.trend_snapshot_refresh_service import TrendSnapshotRefreshService
 from src.services.trend_snapshot_service import TrendSnapshotService
 from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepository
@@ -66,6 +67,14 @@ def get_trend_snapshot_refresh_service() -> TrendSnapshotRefreshService:
 def get_trend_daily_report_service() -> TrendDailyReportService:
     """获取趋势日报服务实例"""
     return TrendDailyReportService()
+
+
+def get_trend_monitor_task_service() -> TrendMonitorTaskService:
+    """获取趋势关键词监控任务同步服务实例"""
+    return TrendMonitorTaskService(
+        keyword_service=get_trend_keyword_service(),
+        task_service=get_task_service(),
+    )
 
 
 def get_notification_service() -> NotificationService:

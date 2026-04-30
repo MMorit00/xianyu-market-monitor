@@ -37,6 +37,7 @@ class TrendDailyReportRunRequest(BaseModel):
 
     candidate_limit: int = 10
     push: bool = True
+    refresh_snapshots: bool = True
 
     @field_validator("candidate_limit", mode="before")
     @classmethod

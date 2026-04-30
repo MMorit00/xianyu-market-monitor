@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from src.api.dependencies import (
     get_trend_daily_report_service,
     get_trend_keyword_service,
+    get_trend_snapshot_refresh_service,
     get_trend_snapshot_service,
 )
 from src.domain.models.trend_daily_report import (
@@ -13,7 +14,10 @@ from src.domain.models.trend_daily_report import (
     TrendDailyReportTestNotificationRequest,
 )
 from src.domain.models.trend_keyword import TrendKeywordCreate, TrendKeywordUpdate
-from src.domain.models.trend_snapshot import TrendSnapshotCreate
+from src.domain.models.trend_snapshot import (
+    TrendSnapshotCreate,
+    TrendSnapshotRefreshRequest,
+)
 from src.infrastructure.config.env_manager import env_manager
 from src.infrastructure.config.settings import AISettings
 from src.services.trend_daily_report_service import TrendDailyReportService
@@ -22,6 +26,7 @@ from src.services.trend_keyword_service import (
     TrendKeywordService,
 )
 from src.services.notification_config_service import load_notification_settings
+from src.services.trend_snapshot_refresh_service import TrendSnapshotRefreshService
 from src.services.trend_snapshot_service import (
     TrendSnapshotService,
     TrendSnapshotValidationError,
@@ -150,6 +155,18 @@ async def list_trend_opportunities(
     return {"items": [item.model_dump(mode="json") for item in opportunities]}
 
 
+@router.post("/snapshots/refresh", response_model=dict)
+async def refresh_trend_snapshots(
+    payload: TrendSnapshotRefreshRequest | None = None,
+    service: TrendSnapshotRefreshService = Depends(get_trend_snapshot_refresh_service),
+):
+    request_payload = payload or TrendSnapshotRefreshRequest()
+    result = await service.refresh_enabled_keywords(
+        limit_per_keyword=request_payload.limit_per_keyword,
+    )
+    return {"message": "趋势快照已刷新", **result}
+
+
 @router.post("/daily-report/run", response_model=dict)
 async def run_daily_report(
     payload: TrendDailyReportRunRequest | None = None,
@@ -159,6 +176,7 @@ async def run_daily_report(
     report = await service.run_report(
         candidate_limit=request_payload.candidate_limit,
         push=request_payload.push,
+        refresh_snapshots=request_payload.refresh_snapshots,
     )
     return {"message": "闲鱼机会日报已生成", "item": report.model_dump(mode="json")}
 

@@ -56,6 +56,7 @@ export async function getLatestDailyReport(): Promise<TrendDailyReport | null> {
 export async function runDailyReport(payload: {
   candidate_limit: number
   push: boolean
+  refresh_snapshots?: boolean
 }): Promise<TrendDailyReport> {
   const response = await http('/api/trends/daily-report/run', {
     method: 'POST',
@@ -75,4 +76,20 @@ export async function sendDailyReportTest(payload: {
     body: JSON.stringify(payload),
   })
   return response.result
+}
+
+export async function refreshTrendSnapshots(payload: {
+  limit_per_keyword: number
+}): Promise<{
+  message: string
+  created_count: number
+  skipped_count: number
+  items: unknown[]
+  skipped: Array<{ keyword_id: number; keyword: string }>
+}> {
+  return await http('/api/trends/snapshots/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }

@@ -206,6 +206,21 @@ class TrendSnapshotCreate(BaseModel):
         return _normalize_text_list(value)
 
 
+class TrendSnapshotRefreshRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    limit_per_keyword: int = 40
+
+    @field_validator("limit_per_keyword", mode="before")
+    @classmethod
+    def normalize_limit(cls, value):
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = 40
+        return max(1, min(parsed, 100))
+
+
 class TrendSnapshotItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
 

@@ -12,6 +12,7 @@ import {
 import {
   getDailyReportConfig,
   getLatestDailyReport,
+  refreshTrendSnapshots,
   runDailyReport,
   sendDailyReportTest,
   type TrendDailyReport,
@@ -33,6 +34,7 @@ const shouldPush = ref(true)
 const isLoading = ref(false)
 const isRunning = ref(false)
 const isTesting = ref(false)
+const isRefreshingSnapshots = ref(false)
 const error = ref<string | null>(null)
 
 const reportItems = computed<TrendDailyReportItem[]>(() => {
@@ -113,6 +115,7 @@ async function handleRunReport() {
     latestReport.value = await runDailyReport({
       candidate_limit: candidateLimit.value,
       push: shouldPush.value,
+      refresh_snapshots: true,
     })
     toast({ title: '日报已生成', description: shouldPush.value ? '已尝试发送 Bark 推送。' : '本次未发送推送。' })
     await loadPage()
@@ -121,6 +124,24 @@ async function handleRunReport() {
     toast({ title: '生成失败', description: error.value, variant: 'destructive' })
   } finally {
     isRunning.value = false
+  }
+}
+
+async function handleRefreshSnapshots() {
+  isRefreshingSnapshots.value = true
+  error.value = null
+  try {
+    const result = await refreshTrendSnapshots({ limit_per_keyword: 40 })
+    toast({
+      title: '趋势快照已刷新',
+      description: `创建 ${result.created_count} 条，跳过 ${result.skipped_count} 个关键词。`,
+    })
+    await loadPage()
+  } catch (e) {
+    error.value = (e as Error).message
+    toast({ title: '刷新失败', description: error.value, variant: 'destructive' })
+  } finally {
+    isRefreshingSnapshots.value = false
   }
 }
 
@@ -168,6 +189,10 @@ onMounted(loadPage)
         <Button variant="outline" :disabled="isTesting" @click="handleTestBark">
           <Send class="mr-2 h-4 w-4" />
           测试 Bark
+        </Button>
+        <Button variant="outline" :disabled="isRefreshingSnapshots" @click="handleRefreshSnapshots">
+          <RefreshCw class="mr-2 h-4 w-4" />
+          刷新趋势快照
         </Button>
       </div>
     </div>

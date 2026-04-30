@@ -19,6 +19,7 @@ from src.infrastructure.persistence.sqlite_bootstrap import bootstrap_sqlite_sto
 from src.infrastructure.persistence.sqlite_connection import sqlite_connection
 from src.services.ai_response_parser import parse_ai_response_json
 from src.services.notification_config_service import load_notification_settings
+from src.services.trend_snapshot_refresh_service import TrendSnapshotRefreshService
 from src.services.trend_snapshot_service import TrendSnapshotService
 
 
@@ -317,11 +318,16 @@ class TrendDailyReportService:
         db_path: str | None = None,
         *,
         snapshot_service: TrendSnapshotService | None = None,
+        refresh_service: TrendSnapshotRefreshService | None = None,
         ai_reviewer: DailyReportAIReviewer | None = None,
         notifier: DailyReportNotifier | None = None,
     ):
         self.db_path = db_path
         self.snapshot_service = snapshot_service or TrendSnapshotService(db_path=db_path)
+        self.refresh_service = refresh_service or TrendSnapshotRefreshService(
+            db_path=db_path,
+            snapshot_service=self.snapshot_service,
+        )
         self.ai_reviewer = ai_reviewer or TrendDailyReportAIReviewer()
         self.notifier = notifier or BarkDailyReportNotifier()
 
@@ -330,9 +336,12 @@ class TrendDailyReportService:
         *,
         candidate_limit: int = 10,
         push: bool = True,
+        refresh_snapshots: bool = True,
     ) -> TrendDailyReport:
         candidate_limit = max(1, min(int(candidate_limit or 10), 20))
         created_at = _now_iso()
+        if refresh_snapshots:
+            await self.refresh_service.refresh_enabled_keywords()
         opportunities = await self.snapshot_service.list_opportunities(
             limit=candidate_limit,
             latest_only=True,

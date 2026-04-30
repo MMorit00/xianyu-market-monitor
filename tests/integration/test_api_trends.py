@@ -5,6 +5,7 @@ from src.api import dependencies as deps
 from src.api.routes import trends
 from src.services.trend_daily_report_service import TrendDailyReportService
 from src.services.trend_keyword_service import TrendKeywordService
+from src.services.trend_snapshot_refresh_service import TrendSnapshotRefreshService
 from src.services.trend_snapshot_service import TrendSnapshotService
 
 
@@ -45,14 +46,23 @@ def _build_client(tmp_path) -> TestClient:
     db_path = str(tmp_path / "app.sqlite3")
     keyword_service = TrendKeywordService(db_path=db_path)
     snapshot_service = TrendSnapshotService(db_path=db_path)
+    refresh_service = TrendSnapshotRefreshService(
+        db_path=db_path,
+        keyword_service=keyword_service,
+        snapshot_service=snapshot_service,
+    )
     notifier = FakeNotifier()
     daily_report_service = TrendDailyReportService(
         db_path=db_path,
+        refresh_service=refresh_service,
         ai_reviewer=FakeReviewer(),
         notifier=notifier,
     )
     app.dependency_overrides[deps.get_trend_keyword_service] = lambda: keyword_service
     app.dependency_overrides[deps.get_trend_snapshot_service] = lambda: snapshot_service
+    app.dependency_overrides[deps.get_trend_snapshot_refresh_service] = (
+        lambda: refresh_service
+    )
     app.dependency_overrides[deps.get_trend_daily_report_service] = (
         lambda: daily_report_service
     )
@@ -179,6 +189,25 @@ def test_trend_snapshot_api_creates_snapshot_and_lists_opportunities(tmp_path):
     opportunities = response.json()["items"]
     assert len(opportunities) == 1
     assert opportunities[0]["keyword"] == "ComfyUI 工作流"
+
+
+def test_trend_snapshot_refresh_api_handles_empty_results(tmp_path):
+    client = _build_client(tmp_path)
+    response = client.post(
+        "/api/trends/keywords",
+        json={"keyword": "ComfyUI 工作流", "category": "AI"},
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/trends/snapshots/refresh",
+        json={"limit_per_keyword": 10},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["created_count"] == 0
+    assert payload["skipped_count"] == 1
 
 
 def test_trend_daily_report_api_runs_and_returns_latest(tmp_path):
